@@ -53,14 +53,32 @@ Example 2:
 In this example, we have halfed the number of threads (but doubled number of requests per thread so total requests remains the same). In this case, the version 1 is only 1.99 times slower. Because we have fewer threads, there is less overhead in the process of locking/unlocking so the version 1 begins to behave more and more similar to the base case.
 
 ## Second Implementation
-In the `hash_table_v2_add_entry` function, xxx
+In the `hash_table_v2_add_entry` function, we create a seperate mutex for every hash table entry by declaring an array of mutex locks of the same size as the amount of entries. Because we only have possible race conditions when two threads try to insert into the same linked list, we only need to lock the specific hash_table_entry. The location of the locks remains the same as in v1 since the critical sections remain the same, however we access each lock by first calculating the index of the list_entry, and then grabbing lock from locks[index]. This implementation should be successful, because it prevents multiple theads from accessing the same list concurrently, but provides us extra speed because threads are still able to access other entries at the same time.
 
 ### Performance
+Example 1:
 ```shell
-
+./hash-table-tester -t 4 -s 40000
+# Generation: 24,575 usec
+# Hash table base: 173,758 usec
+#   - 0 missing
+# Hash table v2: 54,703 usec
+#   - 0 missing
 ```
+This time the speed up is 3.176 times faster, since we have more locks. Having a lock for each seperate list_entry, allows us to have more fine granularity and thus more chance for parallelism/speed-up. Ultimately, though we still have overhead of locking/unlocking, the speed we get from being able to run multiple threads on multiple cores is more advantageous.
 
-This time the speed up is xxx
+Example 2:
+```shell
+# ./hash-table-tester -t 2 -s 80000
+# Generation: 24,408 usec
+# Hash table base: 162,249 usec
+#   - 0 missing
+# Hash table v1: 266,271 usec
+#   - 0 missing
+# Hash table v2: 94,822 usec
+#   - 0 missing
+```
+When we decrease the number of threads, we ssee there is still a speedup of 1.71, but it has decreased from the previous example. This demonstrates how the advantage of the second implementation is the possiblity of running machine commands in parallel. Having more threads (as long as less then number of cores), provides more opportunity for parallelism and more speed-up.
 
 ## Cleaning up
 ```shell
